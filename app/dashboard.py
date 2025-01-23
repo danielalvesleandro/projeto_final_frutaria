@@ -4,9 +4,10 @@ from dash.dependencies import Output, Input
 import pandas as pd
 from sqlalchemy import create_engine
 import plotly.express as px
+from bd.conexao import DATABASE
 
 def conectar_bd():
-    engine = create_engine('mysql+mysqlconnector://root:@localhost/frutaria')
+    engine = create_engine('mysql+mysqlconnector://root:@localhost/{DATABASE}}')
     return engine
 
 # Função para carregar dados de uma tabela do banco
