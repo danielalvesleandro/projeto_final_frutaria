@@ -1,0 +1,749 @@
+import plotly.express as px
+import pandas as pd
+import mysql.connector
+import logging
+import re
+from mysql.connector import IntegrityError
+from datetime import datetime
+from sklearn.preprocessing import MinMaxScaler
+import dash
+from dash import dcc, html
+from dash.dependencies import Output, Input
+from sqlalchemy import create_engine
+
+# Configuração do logging
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Definindo as configurações de conexão
+HOST = 'localhost'
+USER = 'root'
+PASSWORD = ''
+DATABASE = 'frutaria'
+
+# Função para conectar ao banco de dados
+def conectar_bd():
+    try:
+        conn = mysql.connector.connect(host=HOST, user=USER, password=PASSWORD, database=DATABASE)
+        if conn.is_connected():
+            print(f"Conectado ao banco de dados {DATABASE} com sucesso!")
+            return conn
+        else:
+            return None
+    except Error as e:
+        logging.error(f"Erro ao conectar ao banco de dados: {e}")
+        print("Erro ao conectar ao banco de dados.")
+        return None
+
+# Função para criar o banco de dados (caso não exista)
+def criar_bd():
+    try:
+        conn = mysql.connector.connect(host=HOST, user=USER, password=PASSWORD)
+        cursor = conn.cursor()
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATABASE}")
+        conn.commit()
+        conn.close()
+        print(f"Banco de dados {DATABASE} criado ou já existente.")
+    except Error as e:
+        logging.error(f"Erro ao criar o banco de dados: {e}")
+        print("Erro ao criar o banco de dados.")
+
+# Função para criar as tabelas no banco de dados
+def criar_tabelas():
+    try:
+        conn = conectar_bd()
+        if conn is None:
+            return  # Se a conexão falhar, não prosseguir
+        cursor = conn.cursor()
+
+        # Criação das tabelas
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nif VARCHAR(9) NOT NULL UNIQUE,
+            nome VARCHAR(255) NOT NULL,
+            sobrenome VARCHAR(255) NOT NULL,
+            telefone VARCHAR(15) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            endereco TEXT
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fornecedor (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nif VARCHAR(9) NOT NULL UNIQUE,
+            nome VARCHAR(255) NOT NULL,
+            sobrenome VARCHAR(255) NOT NULL,
+            telefone VARCHAR(15) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            endereco TEXT
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS produtos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(255) NOT NULL,
+            categoria VARCHAR(255) NOT NULL,
+            preco DECIMAL(10, 2) NOT NULL,
+            quantidade INT NOT NULL
+        );
+        """)
+
+        cursor.execute("""    
+        CREATE TABLE IF NOT EXISTS estoque (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            id_produto INT NOT NULL,
+            quantidade INT NOT NULL,
+            preco DECIMAL(10, 2) NOT NULL,
+            FOREIGN KEY (id_produto) REFERENCES produtos(id)
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vendas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            cliente_id INT,
+            produto_nome VARCHAR(255) NOT NULL,
+            quantidade INT NOT NULL,
+            total DECIMAL(10, 2) NOT NULL,
+            data_venda DATETIME NOT NULL,
+            FOREIGN KEY(cliente_id) REFERENCES clientes(id)
+        );
+        """)
+
+        conn.commit()
+        conn.close()
+        print("Tabelas criadas com sucesso!")
+    except Error as e:
+        logging.error(f"Erro ao criar tabelas: {e}")
+        print("Erro ao criar tabelas.")
+
+# Função para inicializar o banco de dados e criar as tabelas
+def inicializar_bd():
+    criar_bd()  # Criar banco de dados (caso não exista)
+    criar_tabelas()  # Criar tabelas no banco de dados
+
+# Chama a função para inicializar o banco de dados ao iniciar o programa
+inicializar_bd()
+
+# Função para registrar uma venda
+def registrar_venda(cliente_id, produto_nome, quantidade):
+    conn = conectar_bd()
+    cursor = conn.cursor()
+
+    # Consultar o estoque do produto
+    cursor.execute("SELECT quantidade, preco FROM estoque WHERE id_produto = %s", (produto_nome,))
+    produto = cursor.fetchone()
+
+    if produto and produto[0] >= quantidade:
+        total = produto[1] * quantidade
+        data_venda = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Inserir venda
+        cursor.execute("INSERT INTO vendas (cliente_id, produto_nome, quantidade, total, data_venda) VALUES (%s, %s, %s, %s, %s)",
+                       (cliente_id, produto_nome, quantidade, total, data_venda))
+
+        # Atualizar estoque
+        nova_quantidade = produto[0] - quantidade
+        cursor.execute("UPDATE estoque SET quantidade = %s WHERE id_produto = %s", (nova_quantidade, produto_nome))
+
+        conn.commit()
+        print("Venda registrada com sucesso!")
+    else:
+        print("Produto insuficiente em estoque!")
+
+    conn.close()
+
+# Função para inserir um cliente
+def inserir_cliente():
+    try:
+        padrao_nome = r"^[A-ZÀ-ÿ][a-zà-ÿ'-]*(?: [A-ZÀ-ÿ][a-zà-ÿ'-]*)*$"
+        padrao_email = r"^[a-z0-9]+([.-_][a-z0-9]+)*@[a-z0-9]+([.-][a-z0-9]+)*\.[a-z]{2,}$"
+        padrao_telefone = r"^[9][0-9]{8}$"
+        padrao_nif = r"^[1-9][0-9]{8}$"
+
+        while True:
+            nome = input("Digite o nome do cliente: ")
+            if re.match(padrao_nome, nome):
+                break
+            else:
+                print("Nome inválido. O nome deve começar com letra maiúscula.")
+
+        while True:
+            sobrenome = input("Digite o sobrenome do cliente: ")
+            if re.match(padrao_nome, sobrenome):
+                break
+            else:
+                print("Sobrenome inválido. O sobrenome deve começar com letra maiúscula.")
+
+        while True:
+            nif = input("Digite o NIF do cliente (9 dígitos, ex: 123456789): ")
+            if re.match(padrao_nif, nif):
+                break
+            else:
+                print("NIF inválido. O NIF deve conter exatamente 9 dígitos.")
+
+        while True:
+            email = input("Digite o email do cliente: ")
+            if re.match(padrao_email, email):
+                break
+            else:
+                print("E-mail inválido. O e-mail deve seguir o formato exemplo@dominio.com.")
+
+        while True:
+            telefone = input("Digite o telefone do cliente (apenas números, ex: 912345678): ")
+            if re.match(padrao_telefone, telefone):
+                break
+            else:
+                print("Telefone inválido. O telefone deve começar com '9' e ter 9 dígitos.")
+
+        endereco = input("Digite o endereço do cliente: ")
+
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO clientes (nif, nome, sobrenome, telefone, email, endereco) VALUES (%s, %s, %s, %s, %s, %s)",
+                       (nif, nome, sobrenome, telefone, email, endereco))
+        conn.commit()
+        conn.close()
+
+        print("Cliente registrado com sucesso!")
+    except IntegrityError:
+        logging.error("Erro: NIF ou e-mail duplicado ao registrar cliente.")
+        print("Erro: O NIF ou o e-mail já está registrado.")
+    except Exception as e:
+        logging.error(f"Erro ao registrar cliente: {e}")
+        print("Erro ao registrar cliente.")
+
+# Função para inserir fornecedor com validações de entradas
+def inserir_fornecedor():
+    try:
+        # Padrões para validação de dados
+        padrao_nome = r"^[A-ZÀ-ÿ][a-zà-ÿ'-]*(?: [A-ZÀ-ÿ][a-zà-ÿ'-]*)*$"
+        padrao_email = r"^[a-z0-9]+([.-_][a-z0-9]+)*@[a-z0-9]+([.-][a-z0-9]+)*\.[a-z]{2,}$"
+        padrao_telefone = r"^[9][0-9]{8}$"
+        padrao_nif = r"^[1-9][0-9]{8}$"
+
+        # Coleta e validação dos dados do fornecedor
+        while True:
+            nome = input("Digite o nome do fornecedor: ")
+            if re.match(padrao_nome, nome):
+                break
+            else:
+                print("Nome inválido. O nome deve começar com letra maiúscula.")
+
+        while True:
+            sobrenome = input("Digite o sobrenome do fornecedor: ")
+            if re.match(padrao_nome, sobrenome):
+                break
+            else:
+                print("Sobrenome inválido. O sobrenome deve começar com letra maiúscula.")
+
+        while True:
+            nif = input("Digite o NIF do fornecedor (9 dígitos, ex: 123456789): ")
+            if re.match(padrao_nif, nif):
+                break
+            else:
+                print("NIF inválido. O NIF deve conter exatamente 9 dígitos.")
+
+        while True:
+            email = input("Digite o email do fornecedor: ")
+            if re.match(padrao_email, email):
+                break
+            else:
+                print("E-mail inválido. O e-mail deve seguir o formato exemplo@dominio.com.")
+
+        while True:
+            telefone = input("Digite o telefone do fornecedor (apenas números, ex: 912345678): ")
+            if re.match(padrao_telefone, telefone):
+                break
+            else:
+                print("Telefone inválido. O telefone deve começar com '9' e ter 9 dígitos.")
+
+        endereco = input("Digite o endereço do fornecedor: ")
+
+        # Conectando ao banco de dados e inserindo o fornecedor
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO fornecedor (nif, nome, sobrenome, telefone, email, endereco) VALUES (%s, %s, %s, %s, %s, %s)",
+                       (nif, nome, sobrenome, telefone, email, endereco)) 
+        conn.commit()
+        conn.close()
+
+        print("Fornecedor registrado com sucesso!")
+    except IntegrityError:
+        logging.error("Erro: NIF ou e-mail duplicado ao registrar fornecedor.")
+        print("Erro: O NIF ou o e-mail já está registrado.")
+    except Exception as e:
+        logging.error(f"Erro ao registrar fornecedor: {e}")
+        print("Erro ao registrar fornecedor.")
+
+# Função para inserir produto com validações de entradas
+def inserir_produto():
+    try:
+        # Padrões para validação de dados
+        padrao_nome = r"^[A-Za-zÀ-ÿ0-9 ]+$"  # O nome pode conter letras, números e espaços
+        padrao_categoria = r"^[A-Za-zÀ-ÿ]+$"  # A categoria deve conter apenas letras
+        padrao_preco = r"^\d+(\.\d{1,2})?$"  # Preço deve ser numérico, com até 2 casas decimais
+        padrao_quantidade = r"^\d+$"  # Quantidade deve ser um número inteiro não negativo
+
+        # Coleta e validação dos dados do produto
+        while True:
+            nome = input("Digite o nome do produto: ")
+            if re.match(padrao_nome, nome):
+                break
+            else:
+                print("Nome inválido. O nome do produto deve conter apenas letras, números e espaços.")
+
+        while True:
+            categoria = input("Digite a categoria do produto: ")
+            if re.match(padrao_categoria, categoria):
+                break
+            else:
+                print("Categoria inválida. A categoria deve conter apenas letras.")
+
+        while True:
+            preco = input("Digite o preço do produto (ex: 10.50): ")
+            if re.match(padrao_preco, preco):
+                preco = float(preco)
+                break
+            else:
+                print("Preço inválido. O preço deve ser um número com até duas casas decimais.")
+
+        while True:
+            quantidade = input("Digite a quantidade do produto: ")
+            if re.match(padrao_quantidade, quantidade):
+                quantidade = int(quantidade)
+                break
+            else:
+                print("Quantidade inválida. A quantidade deve ser um número inteiro.")
+
+        # Conectando ao banco de dados e inserindo o produto
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO produtos (nome, categoria, preco, quantidade) VALUES (%s, %s, %s, %s)",
+                       (nome, categoria, preco, quantidade))
+        conn.commit()
+        conn.close()
+
+        print("Produto registrado com sucesso!")
+    except Exception as e:
+        logging.error(f"Erro ao registrar produto: {e}")
+        print("Erro ao registrar produto.")
+
+# Função para consultar clientes
+def consultar_clientes():
+    try:
+        conn = conectar_bd()
+        if conn is None:
+            return
+
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM clientes")
+        clientes = cursor.fetchall()
+        conn.close()
+
+        if not clientes:
+            print("Não há clientes cadastrados.")
+        else:
+            for cliente in clientes:
+                print(f"ID: {cliente[0]}, NIF: {cliente[1]}, Nome: {cliente[2]} {cliente[3]}, Telefone: {cliente[4]}, Email: {cliente[5]}, Endereço: {cliente[6]}")
+
+        return clientes
+    except Error as e:
+        logging.error(f"Erro de banco de dados ao consultar clientes: {e}")
+        print("Erro de banco de dados ao consultar clientes.")
+    except Exception as e:
+        logging.error(f"Erro ao consultar clientes: {e}")
+        print("Erro ao consultar clientes.")
+
+
+# Função para consultar fornecedores
+def consultar_fornecedores():
+    conn = conectar_bd()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM fornecedor")
+    fornecedores = cursor.fetchall()
+    conn.close()
+    return fornecedores
+
+# Função para consultar produtos
+def consultar_produtos():
+    conn = conectar_bd()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM produtos")
+    produtos = cursor.fetchall()
+    conn.close()
+    return produtos
+
+def remover_cliente():
+    try:
+        cliente_id = int(input("Digite o ID do cliente que deseja remover: "))
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM clientes WHERE id = %s", (cliente_id,))
+        conn.commit()
+        conn.close()
+        print(f"Cliente com ID {cliente_id} removido com sucesso!")
+    except Exception as e:
+        logging.error(f"Erro ao remover cliente: {e}")
+        print("Erro ao remover cliente.")
+
+def remover_fornecedor():
+    try:
+        fornecedor_id = int(input("Digite o ID do fornecedor que deseja remover: "))
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM fornecedor WHERE id = %s", (fornecedor_id,))
+        conn.commit()
+        conn.close()
+        print(f"Fornecedor com ID {fornecedor_id} removido com sucesso!")
+    except Exception as e:
+        logging.error(f"Erro ao remover fornecedor: {e}")
+        print("Erro ao remover fornecedor.")
+
+def remover_produto():
+    try:
+        produto_id = int(input("Digite o ID do produto que deseja remover: "))
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM produtos WHERE id = %s", (produto_id,))
+        conn.commit()
+        conn.close()
+        print(f"Produto com ID {produto_id} removido com sucesso!")
+    except Exception as e:
+        logging.error(f"Erro ao remover produto: {e}")
+        print("Erro ao remover produto.")
+
+def atualizar_produto():
+    try:
+        produto_id = int(input("Digite o ID do produto que deseja atualizar: "))
+        nome = input("Digite o novo nome do produto: ")
+        categoria = input("Digite a nova categoria do produto: ")
+        preco = float(input("Digite o novo preço do produto: "))
+        quantidade = int(input("Digite a nova quantidade do produto: "))
+       
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute("""
+        UPDATE produtos
+        SET nome = %s, categoria = %s, preco = %s, quantidade = %s
+        WHERE id = %s
+        """, (nome, categoria, preco, quantidade, produto_id))
+        conn.commit()
+        conn.close()
+        print(f"Produto com ID {produto_id} atualizado com sucesso!")
+    except Exception as e:
+        logging.error(f"Erro ao atualizar produto: {e}")
+        print("Erro ao atualizar produto.")
+
+import datetime
+
+def registrador_venda(cliente_id, id_produto, quantidade):
+    conn = conectar_bd()  # Supondo que a função conectar_bd esteja definida em outro lugar
+    cursor = conn.cursor()
+
+    try:
+        print(f"Verificando o estoque do produto: {id_produto}")
+        # Consultar o estoque do produto
+        cursor.execute("SELECT quantidade, preço FROM estoque WHERE id_produto = %s", (id_produto,))
+        resultado = cursor.fetchone()
+        print(f"Resultado da consulta do estoque: {resultado}")
+
+        if resultado:
+            estoque_atual = resultado[0]
+            preco_unitário = resultado[1]
+            print(f"Estoque atual: {estoque_atual}, Preço unitário: {preco_unitário}")
+
+            if estoque_atual >= quantidade:
+                # Calcular o total da venda
+                total = preco_unitário * quantidade
+                data_venda = datetime.datetime.now()  # Dados e hora atual
+
+                # Registrador de venda no banco de dados
+                cursor.execute("""
+                    INSERT INTO VENDAS (cliente_id, id_produto, quantidade, total, data_venda)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (cliente_id, id_produto, quantidade, total, data_venda))
+
+                # Atualizar o estoque
+                nova_quantidade = estoque_atual - quantidade
+                cursor.execute("UPDATE estoque SET quantidade = %s WHERE id_produto = %s", (nova_quantidade, id_produto))
+
+                conn.commit()
+                print("Venda registrada com sucesso!")
+            else:
+                print("Produto insuficiente em estoque!")
+        else:
+            print(f"O produto com ID '{id_produto}' não foi encontrado no estoque!")
+
+    except Exception as e:
+        print(f"Ocorreu um erro: {e}")
+
+    finally:
+        conn.close()
+
+
+
+
+
+   
+
+
+# Exemplo de como rodar o menu
+def exibir_menu():
+    print("\nMENU DE OPÇÕES")
+    print("1. Inserir Cliente")
+    print("2. Inserir Fornecedor")
+    print("3. Inserir Produto")
+    print("4. Consultar Clientes")
+    print("5. Consultar Fornecedores")
+    print("6. Consultar Produtos")
+    print("7. Remover Cliente")
+    print("8. Remover Fornecedor")
+    print("9. Remover Produto")
+    print("10. Atualizar Produto")
+    print("11. Registrar venda")
+    print("12. Sair")
+
+# Função para processar as opções do menu
+def processar_opcao(opcao):
+    if opcao == 1:
+        inserir_cliente()
+    elif opcao == 2:
+        inserir_fornecedor()
+    elif opcao == 3:
+        inserir_produto()
+    elif opcao == 4:
+        clientes = consultar_clientes()
+        if not clientes:
+            print("Não há clientes cadastrados.")
+        else:
+            for cliente in clientes:
+                print(cliente)
+    elif opcao == 5:
+        fornecedores = consultar_fornecedores()
+        if not fornecedores:
+            print("Não há fornecedores cadastrados.")
+        else:
+            for fornecedor in fornecedores:
+                print(fornecedor)
+    elif opcao == 6:
+        produtos = consultar_produtos()
+        if not produtos:
+            print("Não há produtos cadastrados.")
+        else:
+            for produto in produtos:
+                print(produto)
+    elif opcao == 7:
+        remover_cliente()
+    elif opcao == 8:
+        remover_fornecedor()
+    elif opcao == 9:
+        remover_produto()
+    elif opcao == 10:
+        atualizar_produto()
+    elif opcao == 11:
+        cliente_id = int(input("Informe o ID do cliente: "))
+        produto_nome = input("Informe o nome do produto: ")
+        quantidade = int(input("Informe a quantidade: "))
+        registrar_venda(cliente_id, produto_nome, quantidade)
+    elif opcao == 12:
+        print("Saindo...")
+        return False
+    else:
+        print("Opção inválida! Tente novamente.")
+    return True
+
+# Exemplo de função de menu e processamento
+def menu():
+    while True:
+        exibir_menu()
+        try:
+            opcao = int(input("Escolha uma opção: "))
+            if not processar_opcao(opcao):
+                break
+        except ValueError:
+            print("Por favor, digite um número válido.")
+
+# Rodar o menu
+criar_tabelas()  # Chama a função para criar as tabelas ao iniciar o programa
+menu()  # Depois chama o menu
+
+# Função para conectar ao banco de dados
+def conectar_bd():
+    engine = create_engine('mysql+mysqlconnector://root:@localhost/frutaria')
+    return engine
+
+# Função para carregar dados de uma tabela do banco
+def carregar_dados_tabela(tabela):
+    engine = conectar_bd()
+    query = f"SELECT * FROM {tabela}"
+    df = pd.read_sql_query(query, engine)
+    return df
+
+# Função para tratar valores ausentes
+def tratar_valores_ausentes(df):
+    # Verificar se há valores ausentes em cada coluna
+    for coluna in df.columns:
+        if df[coluna].isnull().sum() > 0:
+            print(f"Valores ausentes na coluna {coluna} antes da limpeza: {df[coluna].isnull().sum()}")
+
+            # Verificar se a coluna tem valores válidos para calcular a moda
+            if not df[coluna].mode().empty:
+                # Substituir valores ausentes pela moda da coluna
+                moda = df[coluna].mode().iloc[0]  # Pegando a moda (valor mais frequente)
+                df[coluna].fillna(moda, inplace=True)
+            else:
+                # Caso não haja moda (por exemplo, todos os valores são diferentes ou a coluna tem apenas NaNs)
+                print(f"A coluna {coluna} não possui moda. Substituindo valores ausentes por 'Desconhecido'.")
+                df[coluna].fillna("Desconhecido", inplace=True)  # Valor padrão de fallback
+    return df
+
+# Função para remover duplicatas
+def remover_duplicatas(df):
+    # Verificando duplicatas
+    print(f"Quantidade de duplicatas antes: {df.duplicated().sum()}")
+    df.drop_duplicates(inplace=True)
+    print(f"Quantidade de duplicatas após: {df.duplicated().sum()}")
+    return df
+
+# Função para tratar dados inconsistentes
+def tratar_dados_inconsistentes(df):
+    # Exemplo: Verificar se as colunas numéricas não possuem valores negativos
+    if 'preco' in df.columns:
+        df = df[df['preco'] >= 0]  # Remover registros com preços negativos
+
+    if 'quantidade' in df.columns:
+        df = df[df['quantidade'] >= 0]  # Remover registros com quantidades negativas
+
+    # Exemplo: Verificar se as colunas de data estão no formato correto
+    if 'data_venda' in df.columns:
+        df['data_venda'] = pd.to_datetime(df['data_venda'], errors='coerce')  # Converte para datetime, com erro em caso de dados inválidos
+
+    return df
+
+# Função para normalizar os dados (exemplo de normalização Min-Max)
+def normalizar_dados(df):
+    # Verifique se as colunas 'preco' e 'quantidade' existem e têm dados
+    if 'preco' in df.columns and df['preco'].notnull().any():
+        scaler = MinMaxScaler()
+        df['preco'] = scaler.fit_transform(df[['preco']])
+
+    if 'quantidade' in df.columns and df['quantidade'].notnull().any():
+        scaler = MinMaxScaler()
+        df['quantidade'] = scaler.fit_transform(df[['quantidade']])
+
+    return df
+
+# Função para carregar e limpar os dados do banco de dados
+def carregar_e_limpar_dados(tabela):
+    # Conectar ao banco de dados e carregar os dados
+    df = carregar_dados_tabela(tabela)
+
+    # Tratamento de valores ausentes
+    df = tratar_valores_ausentes(df)
+
+    # Remover duplicatas
+    df = remover_duplicatas(df)
+
+    # Tratar dados inconsistentes
+    df = tratar_dados_inconsistentes(df)
+
+    # Opcionalmente normalizar os dados (se necessário)
+    df = normalizar_dados(df)
+
+    return df
+
+# Carregar e limpar os dados de estoque
+df_estoque_limpo = carregar_e_limpar_dados('estoque')
+
+# Carregar e limpar os dados de vendas
+df_vendas_limpo = carregar_e_limpar_dados('vendas')
+
+# Visualizar os dados limpos
+print("Dados de Estoque Limpos:")
+print(df_estoque_limpo.head())  # Verifique as primeiras linhas do DataFrame
+print(df_estoque_limpo.info())  # Verifique o tipo e quantidade de dados em cada coluna
+
+print("Dados de Vendas Limpos:")
+print(df_vendas_limpo.head())  # Verifique as primeiras linhas do DataFrame
+print(df_vendas_limpo.info())  # Verifique o tipo e quantidade de dados em cada coluna
+
+# Função de conexão com o banco de dados usando SQLAlchemy
+def conectar_bd():
+    engine = create_engine('mysql+mysqlconnector://root:@localhost/frutaria')
+    return engine
+
+# Função para carregar dados de uma tabela do banco
+def carregar_dados_tabela(tabela):
+    engine = conectar_bd()
+    query = f"SELECT * FROM {tabela}"
+    df = pd.read_sql_query(query, engine)
+    return df
+
+# Função para carregar dados do estoque
+def carregar_estoque():
+    df = carregar_dados_tabela('estoque')
+   
+    # Exibe as colunas do DataFrame para depuração
+    print("Colunas do DataFrame de estoque:", df.columns)
+
+    # Verificar se a coluna 'id_produto' existe
+    if 'id_produto' in df.columns and 'quantidade' in df.columns:
+        return df[['id_produto', 'quantidade', 'preco']]
+    else:
+        print("Erro: Colunas 'id_produto' e/ou 'quantidade' não encontradas.")
+        return pd.DataFrame()  # Retorna um DataFrame vazio caso as colunas não sejam encontradas
+
+# Função para carregar dados de vendas
+def carregar_vendas():
+    return carregar_dados_tabela('vendas').groupby(['data_venda', 'produto_nome'])['quantidade'].sum().reset_index()
+
+# Visualizações
+df_estoque = carregar_estoque()
+
+# Verifique se o DataFrame foi carregado corretamente
+if not df_estoque.empty:
+    fig_estoque = px.bar(df_estoque, x='id_produto', y='quantidade', title="Quantidade de Produtos no Estoque")
+else:
+    fig_estoque = {}
+
+df_vendas = carregar_vendas()
+fig_vendas = px.line(df_vendas, x='data_venda', y='quantidade', title="Vendas ao Longo do Tempo")
+
+# Criar o aplicativo Dash
+app = dash.Dash(__name__)
+
+# Layout do Dash
+app.layout = html.Div([
+    html.H1("Dashboard da Frutaria"),
+    dcc.Dropdown(
+        id='dropdown_produtos',
+        options=[{'label': produto, 'value': produto} for produto in df_estoque['id_produto'].unique()],
+        multi=True,
+        placeholder="Selecione os produtos"
+    ),
+    dcc.Graph(id='grafico_estoque'),
+    dcc.Graph(id='grafico_vendas'),
+])
+
+# Função para atualizar o gráfico de estoque com base nos produtos selecionados
+@app.callback(
+    Output('grafico_estoque', 'figure'),  # Aqui estamos atualizando o gráfico de estoque
+    [Input('dropdown_produtos', 'value')]  # O input é o valor selecionado no dropdown
+)
+def update_estoque(produtos_selecionados):
+    if produtos_selecionados:
+        df_estoque_filtrado = df_estoque[df_estoque['id_produto'].isin(produtos_selecionados)]
+        fig_estoque = px.bar(df_estoque_filtrado, x='id_produto', y='quantidade', color='preco',
+                             title="Quantidade de Produtos no Estoque")
+    else:
+        fig_estoque = px.bar(df_estoque, x='id_produto', y='quantidade', color='preco',
+                             title="Quantidade de Produtos no Estoque")
+    return fig_estoque
+
+# Rodar o servidor
+if __name__ == '__main__':
+    app.run_server(debug=True)
+
