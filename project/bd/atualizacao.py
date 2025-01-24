@@ -1,6 +1,6 @@
 import logging
 from .conexao import conectar_bd
-from validacoes import validar_nome, validar_categoria, validar_preco, validar_quantidade
+from diversos.validacao import validar_nome, validar_categoria, validar_preco, validar_quantidade
 
 # Função para atualizar produto
 def atualizar_produto():

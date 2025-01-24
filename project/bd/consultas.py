@@ -1,6 +1,7 @@
 import logging
 from .conexao import conectar_bd
 from mysql.connector import Error
+from tabulate import tabulate
 
 # Função para consultar clientes
 def consultar_clientes():
@@ -16,10 +17,14 @@ def consultar_clientes():
 
         if not clientes:
             print("Não há clientes cadastrados.")
+            print("\n")
         else:
-            for cliente in clientes:
-                print(f"ID: {cliente[0]}, NIF: {cliente[1]}, Nome: {cliente[2]} {cliente[3]}, Telefone: {cliente[4]}, Email: {cliente[5]}, Endereço: {cliente[6]}")
-
+            # Definir os cabeçalhos das colunas
+            headers = ["ID", "NIF", "Nome", "Sobrenome", "Telefone", "Email", "Endereço"]
+            # Utilizar tabulate para formatar a lista de clientes em tabela
+            print(tabulate(clientes, headers=headers, tablefmt="fancy_grid"))
+            print("\n")
+                
         return clientes
     except Error as e:
         logging.error(f"Erro de banco de dados ao consultar clientes: {e}")
@@ -44,16 +49,19 @@ def consultar_fornecedores():
         if not fornecedores:
             print("Não há fornecedores cadastrados.")
         else:
-            for fornecedor in fornecedores:
-                print(f"ID: {fornecedor[0]}, NIF: {fornecedor[1]}, Nome: {fornecedor[2]} {fornecedor[3]}, Telefone: {fornecedor[4]}, Email: {fornecedor[5]}, Endereço: {fornecedor[6]}")
-
+            # Definir os cabeçalhos das colunas
+            headers = ["ID", "NIF", "Nome", "Sobrenome", "Telefone", "Email", "Endereço"]
+            # Utilizar tabulate para formatar a lista de fornecedores em tabela
+            print(tabulate(fornecedores, headers=headers, tablefmt="fancy_grid"))
+            print("\n")
+                
         return fornecedores
     except Error as e:
-        logging.error(f"Erro de banco de dados ao consultar fornecedor: {e}")
-        print("Erro de banco de dados ao consultar fornecedor.")
+        logging.error(f"Erro de banco de dados ao consultar fornecedores: {e}")
+        print("Erro de banco de dados ao consultar fornecedores.")
     except Exception as e:
-        logging.error(f"Erro ao consultar fornecedor: {e}")
-        print("Erro ao consultar fornecedor.")
+        logging.error(f"Erro ao consultar fornecedores: {e}")
+        print("Erro ao consultar fornecedores.")
         
 # Função para consultar produtos
 def consultar_produtos():
@@ -70,13 +78,16 @@ def consultar_produtos():
         if not produtos:
             print("Não há produtos cadastrados.")
         else:
-            for produto in produtos:
-                print(f"ID: {produto[0]}, Nome: {produto[1]}, Categoria: {produto[2]}, Preço: {produto[3]}, Quantidade: {produto[4]}")
-
+            # Definir os cabeçalhos das colunas
+            headers = ["ID", "Nome", "Categoria", "Preço", "Quantidade"]
+            # Utilizar tabulate para formatar a lista de produtos em tabela
+            print(tabulate(produtos, headers=headers, tablefmt="fancy_grid"))
+            print("\n")
+                
         return produtos
     except Error as e:
-        logging.error(f"Erro de banco de dados ao consultar produto: {e}")
-        print("Erro de banco de dados ao consultar produto.")
+        logging.error(f"Erro de banco de dados ao consultar produtos: {e}")
+        print("Erro de banco de dados ao consultar produtos.")
     except Exception as e:
-        logging.error(f"Erro ao consultar produto: {e}")
-        print("Erro ao consultar produto.")
+        logging.error(f"Erro ao consultar produtos: {e}")
+        print("Erro ao consultar produtos.")

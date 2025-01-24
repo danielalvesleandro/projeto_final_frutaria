@@ -2,17 +2,13 @@ import dash
 from dash import dcc, html
 from dash.dependencies import Output, Input
 import pandas as pd
-from sqlalchemy import create_engine
 import plotly.express as px
 from bd.conexao import DATABASE
-
-def conectar_bd():
-    engine = create_engine('mysql+mysqlconnector://root:@localhost/{DATABASE}}')
-    return engine
+from bd.conexao import conectar_bd_sqlalchemy
 
 # Função para carregar dados de uma tabela do banco
 def carregar_dados_tabela(tabela):
-    engine = conectar_bd()
+    engine = conectar_bd_sqlalchemy()
     query = f"SELECT * FROM {tabela}"
     df = pd.read_sql_query(query, engine)
     return df

@@ -1,6 +1,6 @@
 import logging
 from .conexao import conectar_bd
-from validacoes.entradas import validar_nome, validar_email, validar_telefone, validar_nif, validar_categoria, validar_preco, validar_quantidade, validar_endereco
+from diversos.validacao import validar_nome, validar_email, validar_telefone, validar_nif, validar_categoria, validar_preco, validar_quantidade, validar_endereco
 from mysql.connector import IntegrityError
 
 # Função para inserir cliente com validações de entradas

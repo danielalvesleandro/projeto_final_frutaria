@@ -1,21 +1,33 @@
 import logging
-from .conexao import DATABASE, conectar_bd
+from .conexao import DATABASE, HOST, USER, PASSWORD, conectar_bd
+import mysql.connector
 from mysql.connector import Error
 
 # Função para criar banco de dados
 def criar_bd():
     try:
-        conn = conectar_bd()
+        # Conectar ao banco de dados MySQL padrão (não ao DATABASE diretamente)
+        conn = mysql.connector.connect(host=HOST, user=USER, password=PASSWORD)
         if conn is None:
             return
+        
         cursor = conn.cursor()
+        # Criar banco de dados, se não existir
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATABASE}")
         conn.commit()
         conn.close()
+        
         print(f"Banco de dados {DATABASE} criado ou já existente.")
-    except Error as e:
+        
+        # Agora, se necessário, reabra a conexão ao banco de dados correto
+        conn = conectar_bd()  # Reconectar ao banco de dados que você acabou de criar
+        return conn
+        
+    except mysql.connector.Error as e:
         logging.error(f"Erro ao criar o banco de dados: {e}")
         print("Erro ao criar o banco de dados.")
+        return None
+
 
 # Função para criar tabelas
 def criar_tabelas():
@@ -60,31 +72,23 @@ def criar_tabelas():
         );
         """)
 
-        cursor.execute("""    
-        CREATE TABLE IF NOT EXISTS estoque (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            id_produto INT NOT NULL,
-            quantidade INT NOT NULL,
-            preco DECIMAL(10, 2) NOT NULL,
-            FOREIGN KEY (id_produto) REFERENCES produtos(id)
-        );
-        """)
-
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS vendas (
             id INT AUTO_INCREMENT PRIMARY KEY,
             cliente_id INT,
+            produto_id INT,
             produto_nome VARCHAR(255) NOT NULL,
             quantidade INT NOT NULL,
             total DECIMAL(10, 2) NOT NULL,
             data_venda DATETIME NOT NULL,
-            FOREIGN KEY(cliente_id) REFERENCES clientes(id)
+            FOREIGN KEY(cliente_id) REFERENCES clientes(id),
+            FOREIGN KEY(produto_id) REFERENCES produtos(id)
         );
         """)
 
         conn.commit()
         conn.close()
-        print("Tabelas criadas com sucesso!")
+        print("Tabelas criadas com sucesso.")
     except Error as e:
         logging.error(f"Erro ao criar tabelas: {e}")
         print("Erro ao criar tabelas.")
