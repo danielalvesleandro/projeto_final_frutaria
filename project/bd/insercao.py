@@ -135,14 +135,6 @@ def inserir_fornecedor():
                 print(mensagem_erro)
 
         while True:
-            sobrenome = input("Digite o sobrenome do fornecedor: ")
-            valido, mensagem_erro = validar_nome(sobrenome)
-            if valido:
-                break
-            else:
-                print(mensagem_erro)
-
-        while True:
             nif = input("Digite o NIF do fornecedor (9 dígitos, ex: 123456789): ")
             valido, mensagem_erro = validar_nif(nif)
             if valido:
@@ -177,8 +169,8 @@ def inserir_fornecedor():
         # Conectando ao banco de dados e inserindo o fornecedor
         conn = conectar_bd()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO fornecedor (nif, nome, sobrenome, telefone, email, endereco) VALUES (%s, %s, %s, %s, %s, %s)",
-                       (nif, nome, sobrenome, telefone, email, endereco)) 
+        cursor.execute("INSERT INTO fornecedores (nif, nome, telefone, email, endereco) VALUES (%s, %s, %s, %s, %s)",
+                       (nif, nome, telefone, email, endereco)) 
         conn.commit()
         conn.close()
 

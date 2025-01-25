@@ -1,10 +1,13 @@
 import os
 from bd.inicializacao import criar_bd, criar_tabelas
 from bd.insercao import inserir_cliente, inserir_fornecedor, inserir_produto
-from bd.consultas import consultar_clientes, consultar_fornecedores, consultar_produtos
-from bd.atualizacao import atualizar_produto #atualizar_cliente, atualizar_fornecedor
-from bd.remocao import remover_cliente, remover_fornecedor, remover_produto
-from bd.vendas import registrar_venda#, atualizar_venda, consultar_vendas, cancelar_venda
+from bd.consultas import consultar_clientes, consultar_fornecedores, consultar_produtos, consultar_vendas
+from bd.atualizacao import atualizar_produto, atualizar_cliente, atualizar_fornecedor
+from bd.remocao import remover_cliente, remover_fornecedor, remover_produto, apagar_bd
+from bd.vendas import registrar_venda#, atualizar_venda, , cancelar_venda
+from diversos.limpeza import rotina_de_limpeza
+from bd.amostra import carregar_amostra_dados
+from app.dashboard import carregar_dashboard
 
 # Função para limpar a tela
 def limpar_tela():
@@ -15,7 +18,7 @@ def exibir_menu_principal():
     #limpar_tela()
     print("\nMENU PRINCIPAL")
     print("1. Operações")
-    print("2. Gráficos")
+    print("2. Dashboard")
     print("3. Manutenção")
     print("4. Sair")
 
@@ -25,7 +28,7 @@ def exibir_submenu_operacoes():
     print("\nSUBMENU - OPERAÇÕES")
     print("1. Cliente")
     print("2. Fornecedores")
-    print("3. Estoque")
+    print("3. Produtos")
     print("4. Vendas")
     print("5. Voltar")
 
@@ -49,10 +52,10 @@ def exibir_submenu_fornecedores():
     print("4. Remover Fornecedor")
     print("5. Voltar")
 
-# Função para exibir o submenu de Estoque
-def exibir_submenu_estoque():
+# Função para exibir o submenu de Produtos
+def exibir_submenu_produtos():
     #limpar_tela()
-    print("\nSUBMENU - ESTOQUE")
+    print("\nSUBMENU - PRODUTOS")
     print("1. Inserir Produto")
     print("2. Atualizar Produto")
     print("3. Consultar Produtos")
@@ -69,15 +72,12 @@ def exibir_submenu_vendas():
     print("4. Cancelar Venda")
     print("5. Voltar")
 
-# Função para exibir o submenu de Gráficos
+# Função para exibir o submenu de Dashboard
 def exibir_submenu_graficos():
     #limpar_tela()
-    print("\nSUBMENU - GRÁFICOS")
-    print("1. Visualizar Clientes")
-    print("2. Visualizar Fornecedores")
-    print("3. Visualizar Estoque")
-    print("4. Visualizar Vendas")
-    print("5. Voltar")
+    print("\nSUBMENU - Dashboard")
+    print("1. Carregar Dashboard")
+    print("2. Voltar")
 
 # Função para exibir o submenu de Manutenção
 def exibir_submenu_manutencao():
@@ -98,26 +98,13 @@ def entrada_com_saida(prompt):
 # Função para processar o submenu Cliente
 def processar_submenu_cliente(opcao):
     if opcao == 1:
-        while True:
-            inserir_cliente()
+        inserir_cliente()
     elif opcao == 2:
-        while True:
-            cliente_id = entrada_com_saida("Informe o ID do cliente para atualizar")
-            if cliente_id is None:
-                break
-            nome = entrada_com_saida("Informe o novo nome do cliente")
-            if nome is None:
-                break
-            #atualizar_cliente(cliente_id, nome)
+        atualizar_cliente()
     elif opcao == 3:
         consultar_clientes()
-        input("Pressione Enter para continuar...")
     elif opcao == 4:
-        while True:
-            cliente_id = entrada_com_saida("Informe o ID do cliente para remover")
-            if cliente_id is None:
-                break
-            remover_cliente(cliente_id)
+        remover_cliente()
     elif opcao == 5:
         return False
     else:
@@ -127,50 +114,29 @@ def processar_submenu_cliente(opcao):
 # Função para processar o submenu Fornecedores
 def processar_submenu_fornecedores(opcao):
     if opcao == 1:
-        while True:
-            inserir_fornecedor()
+        inserir_fornecedor()
     elif opcao == 2:
-        while True:
-            fornecedor_id = entrada_com_saida("Informe o ID do fornecedor para atualizar")
-            if fornecedor_id is None:
-                break
-            nome = entrada_com_saida("Informe o novo nome do fornecedor")
-            if nome is None:
-                break
-            #atualizar_fornecedor(fornecedor_id, nome)
+        atualizar_fornecedor()
     elif opcao == 3:
         consultar_fornecedores()
-        input("Pressione Enter para continuar...")
     elif opcao == 4:
-        while True:
-            fornecedor_id = entrada_com_saida("Informe o ID do fornecedor para remover")
-            if fornecedor_id is None:
-                break
-            remover_fornecedor(fornecedor_id)
+        remover_fornecedor()
     elif opcao == 5:
         return False
     else:
         print("Opção inválida! Tente novamente.")
     return True
 
-# Função para processar o submenu Estoque
-def processar_submenu_estoque(opcao):
+# Função para processar o submenu Produtos
+def processar_submenu_produtos(opcao):
     if opcao == 1:
         inserir_produto()
     elif opcao == 2:
-        while True:
-            produto_id = entrada_com_saida("Informe o ID do produto para atualizar")
-            if produto_id is None:
-                break
-            nome = entrada_com_saida("Informe o novo nome do produto")
-            if nome is None:
-                break
-            atualizar_produto(produto_id, nome)
+        atualizar_produto()
     elif opcao == 3:
         consultar_produtos()
-        input("Pressione Enter para continuar...")
     elif opcao == 4:
-        remover_produto(produto_id)
+        remover_produto()
     elif opcao == 5:
         return False
     else:
@@ -197,8 +163,7 @@ def processar_submenu_vendas(opcao):
                 break
             #atualizar_venda(venda_id, nome)
     elif opcao == 3:
-        print("Função não implementada")
-        #consultar_vendas()
+        consultar_vendas()
     elif opcao == 4:
         while True:
             venda_id = entrada_com_saida("Informe o ID da venda para cancelar")
@@ -211,21 +176,11 @@ def processar_submenu_vendas(opcao):
         print("Opção inválida! Tente novamente.")
     return True
 
-# Função para processar o submenu Gráficos
+# Função para processar o submenu Dashboard
 def processar_submenu_graficos(opcao):
     if opcao == 1:
-        print("Visualizar gráficos de clientes...")
-        # Chamar função de visualização de gráficos de clientes
+        carregar_dashboard()
     elif opcao == 2:
-        print("Visualizar gráficos de fornecedores...")
-        # Chamar função de visualização de gráficos de fornecedores
-    elif opcao == 3:
-        print("Visualizar gráficos de estoque...")
-        # Chamar função de visualização de gráficos de estoque
-    elif opcao == 4:
-        print("Visualizar gráficos de vendas...")
-        # Chamar função de visualização de gráficos de vendas
-    elif opcao == 5:
         return False
     else:
         print("Opção inválida! Tente novamente.")
@@ -234,19 +189,31 @@ def processar_submenu_graficos(opcao):
 # Função para processar o submenu Manutenção
 def processar_submenu_manutencao(opcao):
     if opcao == 1:
-        print("Limpar e otimizar tabelas...")
-        # Chamar função de limpeza e otimização de tabelas
+        rotina_de_limpeza()
     elif opcao == 2:
-        print("Carregar amostra de dados...")
-        # Chamar função de carregar amostra de dados
+        carregar_amostra_dados()
     elif opcao == 3:
-        print("Remover base de dados...")
-        # Chamar função para remover base de dados
+        apagar_bd()
+
+        # Perguntar ao usuário se deseja reiniciar o sistema
+        print("\n1. Reiniciar o Sistema")
+        print("2. Voltar ao Menu anterior")
+        escolha = input("Escolha uma opção: ").strip()
+        if escolha == "1":
+            print("Reiniciando o sistema...")
+            main()
+        elif escolha == "2":
+            print("Voltando ao Menu anterior...")
+            return True
+        else:
+            print("Opção inválida! Voltando ao Menu Principal.")
+            return True
     elif opcao == 4:
         return False
     else:
         print("Opção inválida! Tente novamente.")
     return True
+
 
 # Função para processar o menu principal
 def processar_menu_principal():
@@ -272,8 +239,8 @@ def processar_menu_principal():
                                 break
                     elif sub_opcao == 3:
                         while True:
-                            exibir_submenu_estoque()
-                            if not processar_submenu_estoque(int(input("Escolha uma opção: "))):
+                            exibir_submenu_produtos()
+                            if not processar_submenu_produtos(int(input("Escolha uma opção: "))):
                                 break
                     elif sub_opcao == 4:
                         while True:

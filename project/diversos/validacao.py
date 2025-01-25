@@ -1,5 +1,12 @@
 import re
 
+# Função para validar id
+def validar_id(id):
+    if id.isdigit() and int(id) >= 0:
+        return True, ""
+    else:
+        return False, "ID inválido. O ID deve ser um número inteiro não negativo."
+
 # Função para validar nome
 def validar_nome(nome):
     padrao_nome = r"^[A-ZÀ-ÿ][a-zà-ÿ'-]*(?: [A-ZÀ-ÿ][a-zà-ÿ'-]*)*$"

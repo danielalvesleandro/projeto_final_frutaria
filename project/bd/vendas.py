@@ -7,7 +7,7 @@ def registrar_venda(cliente_id, produto_id, quantidade):
     conn = conectar_bd()
     cursor = conn.cursor()
 
-    # Consultar o estoque do produto para obter o nome e o preço
+    # Consultar o estoque do produtos para obter o nome e o preço
     cursor.execute("SELECT nome, quantidade, preco FROM produtos WHERE id = %s", (produto_id,))
     produto = cursor.fetchone()
 
@@ -16,7 +16,7 @@ def registrar_venda(cliente_id, produto_id, quantidade):
         data_venda = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Inserir venda
-        cursor.execute("INSERT INTO vendas (cliente_id, produto_id, produto_nome, quantidade, total, data_venda) "
+        cursor.execute("INSERT INTO vendas (cliente_id, produto_id, quantidade, total, data_venda) "
                        "VALUES (%s, %s, %s, %s, %s, %s)",
                        (cliente_id, produto_id, produto[0], quantidade, total, data_venda))  # produto[0] é o nome
 
@@ -40,19 +40,19 @@ def carregar_dados_tabela(tabela):
     return df
 
 # Função para carregar dados do estoque
-def carregar_estoque():
-    df = carregar_dados_tabela('estoque')
+def carregar_produtos():
+    df = carregar_dados_tabela('produtos')
    
     # Exibe as colunas do DataFrame para depuração
-    print("Colunas do DataFrame de estoque:", df.columns)
+    print("Colunas do DataFrame de produtos:", df.columns)
 
-    # Verificar se a coluna 'id_produto' existe
-    if 'id_produto' in df.columns and 'quantidade' in df.columns:
-        return df[['id_produto', 'quantidade', 'preco']]
+    # Verificar se a coluna 'id' existe
+    if 'id' in df.columns and 'quantidade' in df.columns:
+        return df[['id', 'quantidade', 'preco']]
     else:
-        print("Erro: Colunas 'id_produto' e/ou 'quantidade' não encontradas.")
+        print("Erro: Colunas 'id' e/ou 'quantidade' não encontradas.")
         return pd.DataFrame()  # Retorna um DataFrame vazio caso as colunas não sejam encontradas
 
 # Função para carregar dados de vendas
 def carregar_vendas():
-    return carregar_dados_tabela('vendas').groupby(['data_venda', 'produto_nome'])['quantidade'].sum().reset_index()
+    return carregar_dados_tabela('vendas').groupby(['data_venda', 'produto_id'])['quantidade'].sum().reset_index()

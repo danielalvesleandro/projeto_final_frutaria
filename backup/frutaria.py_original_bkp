@@ -724,13 +724,13 @@ app.layout = html.Div([
         multi=True,
         placeholder="Selecione os produtos"
     ),
-    dcc.Graph(id='grafico_estoque'),
+    dcc.Graph(id='grafico_produtos'),
     dcc.Graph(id='grafico_vendas'),
 ])
 
 # Função para atualizar o gráfico de estoque com base nos produtos selecionados
 @app.callback(
-    Output('grafico_estoque', 'figure'),  # Aqui estamos atualizando o gráfico de estoque
+    Output('grafico_produtos', 'figure'),  # Aqui estamos atualizando o gráfico de estoque
     [Input('dropdown_produtos', 'value')]  # O input é o valor selecionado no dropdown
 )
 def update_estoque(produtos_selecionados):

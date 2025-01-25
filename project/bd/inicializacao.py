@@ -6,7 +6,7 @@ from mysql.connector import Error
 # Função para criar banco de dados
 def criar_bd():
     try:
-        # Conectar ao banco de dados MySQL padrão (não ao DATABASE diretamente)
+        # Conectar ao banco de dados MySQL padrão
         conn = mysql.connector.connect(host=HOST, user=USER, password=PASSWORD)
         if conn is None:
             return
@@ -17,10 +17,7 @@ def criar_bd():
         conn.commit()
         conn.close()
         
-        print(f"Banco de dados {DATABASE} criado ou já existente.")
-        
-        # Agora, se necessário, reabra a conexão ao banco de dados correto
-        conn = conectar_bd()  # Reconectar ao banco de dados que você acabou de criar
+        conn = conectar_bd()
         return conn
         
     except mysql.connector.Error as e:
@@ -34,7 +31,7 @@ def criar_tabelas():
     try:
         conn = conectar_bd()
         if conn is None:
-            return  # Se a conexão falhar, não prosseguir
+            return
         cursor = conn.cursor()
 
         # Criação das tabelas
@@ -51,11 +48,10 @@ def criar_tabelas():
         """)
 
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS fornecedor (
+        CREATE TABLE IF NOT EXISTS fornecedores (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nif VARCHAR(9) NOT NULL UNIQUE,
             nome VARCHAR(255) NOT NULL,
-            sobrenome VARCHAR(255) NOT NULL,
             telefone VARCHAR(15) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
             endereco TEXT
@@ -73,22 +69,20 @@ def criar_tabelas():
         """)
 
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS vendas (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            cliente_id INT,
-            produto_id INT,
-            produto_nome VARCHAR(255) NOT NULL,
-            quantidade INT NOT NULL,
-            total DECIMAL(10, 2) NOT NULL,
-            data_venda DATETIME NOT NULL,
-            FOREIGN KEY(cliente_id) REFERENCES clientes(id),
-            FOREIGN KEY(produto_id) REFERENCES produtos(id)
-        );
+            CREATE TABLE IF NOT EXISTS vendas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                cliente_id INT,
+                produto_id INT,
+                quantidade INT NOT NULL,
+                total DECIMAL(10, 2) NOT NULL,
+                data_venda DATETIME NOT NULL,
+                FOREIGN KEY(cliente_id) REFERENCES clientes(id),
+                FOREIGN KEY(produto_id) REFERENCES produtos(id)
+            );
         """)
 
         conn.commit()
         conn.close()
-        print("Tabelas criadas com sucesso.")
     except Error as e:
         logging.error(f"Erro ao criar tabelas: {e}")
         print("Erro ao criar tabelas.")
