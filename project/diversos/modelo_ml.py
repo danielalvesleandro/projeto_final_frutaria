@@ -1,94 +1,103 @@
 import pandas as pd
 from bd.conexao import conectar_bd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 import seaborn as sns
 import matplotlib
-matplotlib.use('Qt5Agg')
+matplotlib.use('Agg')  # Para evitar problemas no WSL
 import matplotlib.pyplot as plt
+import uuid
 
 # Função para carregar dados do banco de dados
-# def carregar_dados():
-#     conexao = conectar_bd()
-#     cursor = conexao.cursor(dictionary=True)
+def carregar_dados():
+    conexao = conectar_bd()
+    cursor = conexao.cursor(dictionary=True)
 
-#     # Consultar as tabelas de vendas, clientes e produtos
-#     query = """
-#         SELECT 
-#             v.id AS venda_id,
-#             c.nif AS cliente_nif,
-#             p.categoria AS produto_categoria,
-#             v.quantidade,
-#             v.total
-#         FROM vendas v
-#         INNER JOIN clientes c ON v.cliente_id = c.id
-#         INNER JOIN produtos p ON v.produto_id = p.id;
-#     """
-#     cursor.execute(query)
-#     dados = cursor.fetchall()
+    # Consultar as tabelas de vendas, clientes e produtos
+    query = """
+        SELECT 
+            v.id AS venda_id,
+            c.nif AS cliente_nif,
+            p.categoria AS produto_categoria,
+            v.quantidade,
+            v.total
+        FROM vendas v
+        INNER JOIN clientes c ON v.cliente_id = c.id
+        INNER JOIN produtos p ON v.produto_id = p.id;
+    """
+    cursor.execute(query)
+    dados = cursor.fetchall()
 
-#     # Fechar conexão
-#     cursor.close()
-#     conexao.close()
+    # Fechar conexão
+    cursor.close()
+    conexao.close()
 
-#     # Converter para DataFrame
-#     df = pd.DataFrame(dados)
-#     return df
+    # Converter para DataFrame
+    df = pd.DataFrame(dados)
+    return df
 
-# # Função para treinar e avaliar modelos de aprendizado de máquina
-# def carregar_modelo_ml():
-#     # Carregar os dados do banco
-#     data = carregar_dados()
-#     print("Dados carregados do banco de dados:\n", data.head())
-
-#     # Variáveis independentes (X) e dependente (y)
-#     X = data[['cliente_nif', 'produto_categoria', 'quantidade']]
-#     y = data['total']
-
-#     # Converter variáveis categóricas para numéricas
-#     X = pd.get_dummies(X, columns=['cliente_nif', 'produto_categoria'], drop_first=True)
-
-#     # Dividir em conjuntos de treino e teste
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-
-#     # Modelos a serem treinados
-#     modelos = {
-#         "Logistic Regression": LogisticRegression(max_iter=200),
-#         "Decision Tree": DecisionTreeClassifier(random_state=42),
-#         "KNN": KNeighborsClassifier(n_neighbors=5)
-#     }
-
-#     resultados = []
-
-#     # Treinar e avaliar cada modelo
-#     for nome, modelo in modelos.items():
-#         modelo.fit(X_train, y_train)
-#         y_pred = modelo.predict(X_test)
-
-#         # Avaliar o modelo
-#         acc = accuracy_score(y_test, y_pred.round())  # Arredondar previsões para comparação com valores reais
-#         print(f"Accuracy - {nome}: {acc}")
-#         print(f"Classification Report - {nome}:\n", classification_report(y_test, y_pred.round()))
-#         resultados.append((nome, acc))
-
-#     # Visualizar resultados
-#     modelos_nome = [r[0] for r in resultados]
-#     accuracies = [r[1] for r in resultados]
-
-#     sns.barplot(x=modelos_nome, y=accuracies)
-    
-#     plt.title('Comparação de Acurácia dos Modelos')
-#     plt.ylabel('Acurácia')
-#     plt.xlabel('Modelos')
-#     plt.show()
-
+# Função para treinar e avaliar modelos de aprendizado de máquina
 def carregar_modelo_ml():
-    plt.plot([1, 2, 3], [4, 5, 6])
-    plt.title("Teste de Gráfico no WSL")
-    plt.show()
+    # Carregar os dados do banco
+    data = carregar_dados()
+    print("Dados carregados do banco de dados:\n", data.head())
+
+    # Variáveis independentes (X) e dependente (y)
+    X = data[['cliente_nif', 'produto_categoria', 'quantidade']]
+    y = data['total']
+
+    # Converter variáveis categóricas para numéricas
+    X = pd.get_dummies(X, columns=['cliente_nif', 'produto_categoria'], drop_first=True)
+
+    print(f"Forma dos dados (X, y): {data.shape}")
+    print(f"Dados de entrada (X):\n{X.head()}")
+
+    # Dividir em conjuntos de treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    print(f"Tamanho dos conjuntos de treino e teste: X_train: {X_train.shape}, X_test: {X_test.shape}")
+
+    # Modelos a serem treinados (modelos de regressão)
+    modelos = {
+        "Linear Regression": LinearRegression(),
+        "Decision Tree Regressor": DecisionTreeRegressor(random_state=42),
+        "KNN Regressor": KNeighborsRegressor(n_neighbors=5)
+    }
+
+    resultados = []
+
+    # Treinar e avaliar cada modelo
+    for nome, modelo in modelos.items():
+        try:
+            print(f"Treinando o modelo: {nome}")
+            modelo.fit(X_train, y_train)
+            y_pred = modelo.predict(X_test)
+
+            # Avaliar o modelo
+            mse = mean_squared_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+            print(f"Mean Squared Error - {nome}: {mse}")
+            print(f"R2 Score - {nome}: {r2}")
+            resultados.append((nome, r2))
+        except Exception as e:
+            print(f"Erro ao treinar o modelo {nome}: {e}")
+
+    # Visualizar resultados
+    if resultados:
+        modelos_nome = [r[0] for r in resultados]
+        r2_scores = [r[1] for r in resultados]
+
+        sns.barplot(x=modelos_nome, y=r2_scores)
+
+        plt.title('Comparação de R2 dos Modelos')
+        plt.ylabel('R2 Score')
+        plt.xlabel('Modelos')
+        random_suffix = uuid.uuid4().hex[:8]  # You can adjust the length
+        plt.savefig(f"png/comparacao_modelos_{random_suffix}.png", format="png")
+    else:
+        print("Nenhum modelo treinado com sucesso.")
 
 if __name__ == "__main__":
     carregar_modelo_ml()

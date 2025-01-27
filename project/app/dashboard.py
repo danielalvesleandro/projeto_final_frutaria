@@ -85,3 +85,6 @@ app.layout = html.Div([
 
 def carregar_dashboard():
     app.run_server(host="0.0.0.0", port=9050, debug=True, use_reloader=False)
+
+if __name__ == "__main__":
+    carregar_dashboard()
