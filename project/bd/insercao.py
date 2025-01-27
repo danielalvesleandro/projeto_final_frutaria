@@ -181,3 +181,32 @@ def inserir_fornecedor():
     except Exception as e:
         logging.error(f"Erro ao registrar fornecedor: {e}")
         print("Erro ao registrar fornecedor.")
+        
+# Função para registrar venda
+def registrar_venda(cliente_id, produto_id, quantidade):
+    conn = conectar_bd()
+    cursor = conn.cursor()
+
+    # Consultar o estoque do produtos para obter o nome e o preço
+    cursor.execute("SELECT nome, quantidade, preco FROM produtos WHERE id = %s", (produto_id,))
+    produto = cursor.fetchone()
+
+    if produto and produto[1] >= quantidade:  # produto[1] é a quantidade em estoque
+        total = produto[2] * quantidade  # produto[2] é o preço
+        data_venda = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Inserir venda (corrigido)
+        cursor.execute("INSERT INTO vendas (cliente_id, produto_id, quantidade, total, data_venda) "
+                       "VALUES (%s, %s, %s, %s, %s)",
+                       (cliente_id, produto_id, quantidade, total, data_venda))
+
+        # Atualizar estoque
+        nova_quantidade = produto[1] - quantidade
+        cursor.execute("UPDATE produtos SET quantidade = %s WHERE id = %s", (nova_quantidade, produto_id))
+
+        conn.commit()
+        print("Venda registrada com sucesso!")
+    else:
+        print("Produto insuficiente em estoque ou produto não encontrado!")
+
+    conn.close()
