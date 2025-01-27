@@ -1,10 +1,10 @@
 import os
 from bd.inicializacao import criar_bd, criar_tabelas
-from bd.insercao import inserir_cliente, inserir_fornecedor, inserir_produto
+from bd.insercao import inserir_cliente, inserir_fornecedor, inserir_produto, registrar_venda
 from bd.consultas import consultar_clientes, consultar_fornecedores, consultar_produtos, consultar_vendas
 from bd.atualizacao import atualizar_produto, atualizar_cliente, atualizar_fornecedor
 from bd.remocao import remover_cliente, remover_fornecedor, remover_produto, apagar_bd
-from bd.vendas import registrar_venda#, atualizar_venda, , cancelar_venda
+#atualizar_venda, , cancelar_venda
 
 from diversos.limpeza import rotina_de_limpeza
 from diversos.modelo_ml import carregar_modelo_ml
