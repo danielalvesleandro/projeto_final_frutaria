@@ -15,10 +15,10 @@ def registrar_venda(cliente_id, produto_id, quantidade):
         total = produto[2] * quantidade  # produto[2] é o preço
         data_venda = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Inserir venda
+        # Inserir venda (corrigido)
         cursor.execute("INSERT INTO vendas (cliente_id, produto_id, quantidade, total, data_venda) "
-                       "VALUES (%s, %s, %s, %s, %s, %s)",
-                       (cliente_id, produto_id, produto[0], quantidade, total, data_venda))  # produto[0] é o nome
+                       "VALUES (%s, %s, %s, %s, %s)",
+                       (cliente_id, produto_id, quantidade, total, data_venda))
 
         # Atualizar estoque
         nova_quantidade = produto[1] - quantidade
@@ -30,7 +30,6 @@ def registrar_venda(cliente_id, produto_id, quantidade):
         print("Produto insuficiente em estoque ou produto não encontrado!")
 
     conn.close()
-
 
 # Função para carregar dados de uma tabela do banco
 def carregar_dados_tabela(tabela):

@@ -103,7 +103,7 @@ def consultar_vendas():
         
         # Consulta para buscar vendas com os detalhes dos produtos e clientes
         cursor.execute("""
-            SELECT v.id, c.nome AS cliente_nome, p.nome AS p.nome, v.quantidade, v.total, v.data_venda 
+            SELECT v.id, c.nome AS cliente_nome, p.nome AS produto_nome, v.quantidade, v.total, v.data_venda
             FROM vendas v
             JOIN clientes c ON v.cliente_id = c.id
             JOIN produtos p ON v.produto_id = p.id
