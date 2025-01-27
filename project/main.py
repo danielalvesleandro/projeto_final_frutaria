@@ -5,7 +5,9 @@ from bd.consultas import consultar_clientes, consultar_fornecedores, consultar_p
 from bd.atualizacao import atualizar_produto, atualizar_cliente, atualizar_fornecedor
 from bd.remocao import remover_cliente, remover_fornecedor, remover_produto, apagar_bd
 from bd.vendas import registrar_venda#, atualizar_venda, , cancelar_venda
+
 from diversos.limpeza import rotina_de_limpeza
+from diversos.modelo_ml import carregar_modelo_ml
 from bd.amostra import carregar_amostra_dados
 from app.dashboard import carregar_dashboard
 
@@ -18,7 +20,7 @@ def exibir_menu_principal():
     #limpar_tela()
     print("\nMENU PRINCIPAL")
     print("1. Operações")
-    print("2. Dashboard")
+    print("2. Análise de Dados")
     print("3. Manutenção")
     print("4. Sair")
 
@@ -73,11 +75,12 @@ def exibir_submenu_vendas():
     print("5. Voltar")
 
 # Função para exibir o submenu de Dashboard
-def exibir_submenu_graficos():
+def exibir_submenu_analise():
     #limpar_tela()
-    print("\nSUBMENU - Dashboard")
+    print("\nSUBMENU - Análise de Dados")
     print("1. Carregar Dashboard")
-    print("2. Voltar")
+    print("2. Modelo Machine Learning")
+    print("3. Voltar")
 
 # Função para exibir o submenu de Manutenção
 def exibir_submenu_manutencao():
@@ -177,10 +180,12 @@ def processar_submenu_vendas(opcao):
     return True
 
 # Função para processar o submenu Dashboard
-def processar_submenu_graficos(opcao):
+def processar_submenu_analise(opcao):
     if opcao == 1:
         carregar_dashboard()
     elif opcao == 2:
+        carregar_modelo_ml()
+    elif opcao == 3:
         return False
     else:
         print("Opção inválida! Tente novamente.")
@@ -254,9 +259,9 @@ def processar_menu_principal():
 
             elif opcao == 2:
                 while True:
-                    exibir_submenu_graficos()
+                    exibir_submenu_analise()
                     sub_opcao = int(input("Escolha uma opção: "))
-                    if not processar_submenu_graficos(sub_opcao):
+                    if not processar_submenu_analise(sub_opcao):
                         break
 
             elif opcao == 3:
